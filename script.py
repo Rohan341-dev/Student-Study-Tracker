@@ -1,62 +1,50 @@
-import cv2
-from ultralytics import YOLO
-import time
+import speech_recognition as sr
+import pyttsx3
+import datetime
+import webbrowser
+import os
+import pywhatkit
 
-MODEL_PATH = "yolov8n.pt"
-DETECTION_CLASS = "cell phone"
-DISTRACTION_LOG_FILE = "distraction_log.txt"
+engine = pyttsx3.init()
+listener = sr.Recognizer()
 
-model = YOLO(MODEL_PATH)
+def talk(text):
+    engine.say(text)
+    engine.runAndWait()
 
-cap = cv2.VideoCapture(0)
-if not cap.isOpened():
-    exit()
+def take_command():
+    try:
+        with sr.Microphone() as source:
+            print("Listening...")
+            voice = listener.listen(source)
+            command = listener.recognize_google(voice)
+            command = command.lower()
+            return command
+    except:
+        return ""
 
-distraction_time = 0
-phone_detected_prev = False
+def run_assistant():
+    command = take_command()
+    print(f"Command: {command}")
+
+    if "open youtube" in command:
+        talk("Opening YouTube")
+        webbrowser.open("https://www.youtube.com")
+    elif "open chrome" in command:
+        talk("Opening Chrome")
+        os.system("open -a 'Google Chrome'" if os.name == "posix" else "start chrome")
+    elif "play" in command:
+        song = command.replace("play", "")
+        talk(f"Playing {song} on YouTube")
+        pywhatkit.playonyt(song)
+    elif "time" in command:
+        now = datetime.datetime.now().strftime("%H:%M")
+        talk(f"The time is {now}")
+    elif "exit" in command:
+        talk("Goodbye!")
+        exit()
+    else:
+        talk("I didn't understand that command")
 
 while True:
-    ret, frame = cap.read()
-    if not ret:
-        break
-
-    results = model(frame)
-    detections = results[0].boxes
-    labels_dict = results[0].names
-
-    phone_detected = False
-
-    for box in detections:
-        cls_id = int(box.cls[0])
-        class_name = labels_dict[cls_id]
-
-        if class_name == DETECTION_CLASS:
-            phone_detected = True
-            xyxy = box.xyxy[0].cpu().numpy().astype(int)
-            x1, y1, x2, y2 = xyxy
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
-            cv2.putText(frame, class_name, (x1, y1 - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
-
-    if phone_detected:
-        if not phone_detected_prev:
-            start_time = time.time()
-        else:
-            distraction_time += 1 / 30
-
-    phone_detected_prev = phone_detected
-
-    cv2.putText(frame, f"Distraction Time: {int(distraction_time)} sec",
-                (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 0, 0), 2)
-    cv2.imshow("Student Study Tracker", frame)
-
-    if cv2.waitKey(1) & 0xFF == ord("q"):
-        break
-
-cap.release()
-cv2.destroyAllWindows()
-
-with open(DISTRACTION_LOG_FILE, "w") as f:
-    f.write(f"Total distraction time: {int(distraction_time)} seconds\n")
-
-print(f"Total distraction time: {int(distraction_time)} seconds")
+    run_assistant()
