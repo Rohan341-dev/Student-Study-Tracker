@@ -1,10 +1,9 @@
 import cv2
-import cvlib as cv
-from cvlib.object_detection import draw_bbox
+from ultralytics import YOLO
 
-# Open default webcam
+model = YOLO("yolov8n.pt")
+
 cap = cv2.VideoCapture(0)
-
 print("Press 'q' to quit")
 
 while True:
@@ -12,21 +11,29 @@ while True:
     if not ret:
         break
 
-    # Detect common objects in the frame
-    bbox, labels, conf = cv.detect_common_objects(frame)
+    results = model(frame)
 
-    # Draw bounding boxes on the frame
-    out = draw_bbox(frame, bbox, labels, conf)
+    # Filter results for only "cell phone"
+    detections = results[0].boxes
+    labels = results[0].names
 
-    # Print detected objects in console
-    if labels:
-        print("Objects detected:", labels)
+    for box in detections:
+        cls_id = int(box.cls[0])
+        class_name = labels[cls_id]
 
-    # Show video with bounding boxes
-    cv2.imshow("Object Detection", out)
+        if class_name == "cell phone":
+            xyxy = box.xyxy[0].cpu().numpy()
+            x1, y1, x2, y2 = xyxy.astype(int)
 
-    # Quit when 'q' is pressed
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
+            cv2.putText(frame, class_name, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 
+                        0.9, (0, 0, 255), 2)
+
+            print("🚨 Phone detected!")
+
+    cv2.imshow("Phone Detection", frame)
+
+    if cv2.waitKey(1) & 0xFF == ord("q"):
         break
 
 cap.release()
