@@ -43,7 +43,7 @@ fps_display_interval = 1.0         # update FPS every second
 # ------------------------------------------------------------
 def play_alert():
     try:
-        playsound('')      # make sure alert.mp3 is in the same folder
+        playsound('HOME 14 2.m4a')      # make sure alert.mp3 is in the same folder
     except Exception as e:
         print(f"Could not play sound: {e}")
 
